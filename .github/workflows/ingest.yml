@@ -1,0 +1,33 @@
+name: Ingest Good News
+
+on:
+  # Run ~4× per day at even intervals. Times in UTC.
+  schedule:
+    - cron: '15 0 * * *'   # 00:15 UTC — midnight eastern
+    - cron: '15 6 * * *'   # 06:15 UTC — morning
+    - cron: '15 12 * * *'  # 12:15 UTC — noon
+    - cron: '15 18 * * *'  # 18:15 UTC — evening
+
+  # Allow manual trigger for testing / on-demand refresh
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    name: Run ingestion pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Trigger ingest endpoint
+        run: |
+          response=$(curl --silent --show-error --fail \
+            --max-time 300 \
+            -X POST "${{ vars.DAYBREAK_URL }}/api/ingest" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          echo "Response: $response"
+          # Surface key metrics in the GitHub Actions log
+          echo "$response" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print(f'✓ fetched={d.get(\"fetched\",0)}  deduped={d.get(\"deduped\",0)}  kept={d.get(\"kept\",0)}  dropped={d.get(\"dropped\",0)}  pruned={d.get(\"pruned\",0)}')" || true
