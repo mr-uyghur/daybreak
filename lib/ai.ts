@@ -20,7 +20,11 @@ function getClient(): Anthropic {
   return _client
 }
 
-/** JSON Schema for the AI response — must mirror StoryAnalysisSchema exactly */
+/**
+ * JSON Schema for the AI response — must mirror StoryAnalysisSchema exactly.
+ * Only isPositive is required: when a story is rejected, the model omits the
+ * content fields entirely so the reject costs minimal output tokens.
+ */
 const STORY_JSON_SCHEMA = {
   type: 'object',
   properties: {
@@ -30,36 +34,55 @@ const STORY_JSON_SCHEMA = {
     },
     positivityScore: {
       type: 'number',
-      description: 'Float 0.0–1.0 reflecting how positive and uplifting this story is. 1.0 = overwhelmingly good news. 0.5 = mildly positive. Only set if isPositive is true.',
+      description: 'Float 0.0–1.0 reflecting how positive and uplifting this story is. 1.0 = overwhelmingly good news. 0.5 = mildly positive. Omit if isPositive is false.',
     },
     headline: {
       type: 'string',
-      description: 'A clean, specific, accurate headline for this story. Max 140 chars. No clickbait.',
+      description: 'A clean, specific, accurate headline for this story. Max 140 chars. No clickbait. Omit if isPositive is false.',
     },
     summary: {
       type: 'string',
-      description: 'A 3–4 sentence summary of the story written in clear, warm, editorial prose. Include concrete details (numbers, names, places). Max 500 chars.',
+      description: 'A 3–4 sentence summary of the story written in clear, warm, editorial prose. Include concrete details (numbers, names, places). Max 500 chars. Omit if isPositive is false.',
     },
     category: {
       type: 'string',
       enum: CATEGORIES as unknown as string[],
-      description: 'The single best-fitting category from the allowed list.',
+      description: 'The single best-fitting category from the allowed list. Omit if isPositive is false.',
     },
   },
-  required: ['isPositive', 'positivityScore', 'headline', 'summary', 'category'],
+  required: ['isPositive'],
   additionalProperties: false,
 } as const
 
-/** Zod schema for validating / narrowing the AI response */
+/** Zod schema for validating / narrowing the raw AI response */
 const StoryAnalysisSchema = z.object({
   isPositive:      z.boolean(),
-  positivityScore: z.number().min(0).max(1),
-  headline:        z.string().max(200),
-  summary:         z.string().transform(s => s.slice(0, 600)),
-  category:        z.enum(CATEGORIES),
+  positivityScore: z.number().min(0).max(1).optional(),
+  headline:        z.string().max(200).optional(),
+  summary:         z.string().transform(s => s.slice(0, 600)).optional(),
+  category:        z.enum(CATEGORIES).optional(),
 })
 
-export type StoryAnalysis = z.infer<typeof StoryAnalysisSchema>
+/** Narrowed shape for a story that was judged positive — all fields present */
+export type StoryAnalysis = {
+  positivityScore: number
+  headline:        string
+  summary:         string
+  category:        StoryCategory
+}
+
+/**
+ * Discriminated result of analyzeStory:
+ * - 'positive' — Claude judged the story genuinely positive; data is complete.
+ * - 'rejected' — Claude explicitly judged isPositive:false. Safe to persist a
+ *   dedup marker so this URL is never re-analyzed.
+ * - null       — transient failure (API error, malformed/incomplete response).
+ *   NOT a verdict — caller must NOT persist a reject marker; retry next run.
+ */
+export type AnalysisResult =
+  | { verdict: 'positive'; data: StoryAnalysis }
+  | { verdict: 'rejected' }
+  | null
 
 /** Raw RSS item passed to the AI */
 export interface RawStoryInput {
@@ -72,10 +95,10 @@ export interface RawStoryInput {
 
 /**
  * Analyzes a single story.
- * Returns null if the story is not positive, parse failed, or the API errored.
- * Caller should log the return value and skip nulls.
+ * Returns null on transient failure (caller retries next run) — never on a
+ * genuine reject, which returns { verdict: 'rejected' } instead.
  */
-export async function analyzeStory(input: RawStoryInput): Promise<StoryAnalysis | null> {
+export async function analyzeStory(input: RawStoryInput): Promise<AnalysisResult> {
   const categoryInstruction = input.categoryHint
     ? `The source suggests this might be in the "${input.categoryHint}" category, but use your judgment.`
     : 'Pick the most fitting category from the list.'
@@ -99,7 +122,10 @@ Instructions:
 - positivityScore: How uplifting is this? 0.95+ = life-changing breakthrough. 0.7–0.94 = solid good news. 0.5–0.69 = mildly positive.
 - headline: Rewrite for clarity and warmth. Specific beats vague. "Scientists restore 70,000 coral fragments" > "Scientists make progress on reef".
 - summary: 3–4 sentences covering who, what, where, why it matters. Warm and factual, not hype.
-- category: Choose from the enum — pick the ONE most fitting category.`
+- category: Choose from the enum — pick the ONE most fitting category.
+
+If isPositive is false, return ONLY {"isPositive": false} and omit every other field — do not
+generate a headline, summary, score, or category for a story that won't be published.`
 
   try {
     const response = await getClient().messages.create({
@@ -127,12 +153,30 @@ Instructions:
       return null
     }
 
-    if (!parsed.data.isPositive) return null
+    if (!parsed.data.isPositive) return { verdict: 'rejected' }
 
-    // Clamp score defensively
+    const { positivityScore, headline, summary, category } = parsed.data
+    if (
+      positivityScore === undefined ||
+      headline === undefined ||
+      summary === undefined ||
+      category === undefined
+    ) {
+      // isPositive:true but content fields missing — malformed, not a real
+      // reject. Retry next run rather than burying a potential positive.
+      console.warn('[ai] isPositive=true but content fields missing')
+      return null
+    }
+
     return {
-      ...parsed.data,
-      positivityScore: Math.max(0, Math.min(1, parsed.data.positivityScore)),
+      verdict: 'positive',
+      data: {
+        // Clamp score defensively
+        positivityScore: Math.max(0, Math.min(1, positivityScore)),
+        headline,
+        summary,
+        category,
+      },
     }
   } catch (err) {
     console.error('[ai] analyzeStory error:', err)

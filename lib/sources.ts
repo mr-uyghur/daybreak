@@ -53,12 +53,4 @@ export const SOURCES: Source[] = [
     type: 'rss',
     categoryHint: 'Environment',
   },
-
-  // ── Community & World ──────────────────────────────────────────────────────
-  {
-    name: 'Reasons to be Cheerful — Community',
-    url: 'https://reasonstobecheerful.world/feed/',
-    type: 'rss',
-    categoryHint: 'Community',
-  },
 ]

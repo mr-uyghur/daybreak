@@ -117,6 +117,10 @@ export async function runIngest(): Promise<IngestResult> {
   result.deduped = candidates.length - newCandidates.length
 
   // ── 3. Analyze new items with Haiku ───────────────────────────────────────
+  // Rejects are persisted as status='rejected' markers (empty content) so the
+  // dedup check in step 2 skips them on every future run — Claude never has
+  // to re-judge an article it has already rejected. Transient failures
+  // (analysis === null) leave no marker and are naturally retried next run.
   for (const candidate of newCandidates) {
     result.analyzed++
     try {
@@ -128,25 +132,43 @@ export async function runIngest(): Promise<IngestResult> {
         categoryHint: candidate.categoryHint,
       })
 
-      if (!analysis) {
+      if (analysis === null) {
         result.dropped++
         continue
       }
 
-      const score = computeScore(analysis.positivityScore, candidate.publishedAt)
+      if (analysis.verdict === 'rejected') {
+        await db.insert(stories).values({
+          urlHash:        candidate.urlHash,
+          sourceUrl:      candidate.sourceUrl,
+          headline:       '',
+          summary:        '',
+          category:       'Uncategorized',
+          imageUrl:       candidate.imageUrl,
+          positivityScore: 0,
+          score:          0,
+          publishedAt:    candidate.publishedAt,
+          status:         'rejected',
+        }).onConflictDoNothing({ target: stories.urlHash })
+        result.dropped++
+        continue
+      }
+
+      const { data } = analysis
+      const score = computeScore(data.positivityScore, candidate.publishedAt)
 
       await db.insert(stories).values({
         urlHash:        candidate.urlHash,
         sourceUrl:      candidate.sourceUrl,
-        headline:       analysis.headline,
-        summary:        analysis.summary,
-        category:       analysis.category,
+        headline:       data.headline,
+        summary:        data.summary,
+        category:       data.category,
         imageUrl:       candidate.imageUrl,
-        positivityScore: analysis.positivityScore,
+        positivityScore: data.positivityScore,
         score,
         publishedAt:    candidate.publishedAt,
         status:         'active',
-      })
+      }).onConflictDoNothing({ target: stories.urlHash })
 
       result.kept++
     } catch (err) {
