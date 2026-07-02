@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Daybreak 🌅
 
-## Getting Started
+> *"The world is better than your feed says."*
 
-First, run the development server:
+Daybreak is a positive-only news web app featuring a TikTok-style, full-screen, infinite-scroll feed of genuinely uplifting news from around the globe. Designed to combat doomscrolling, Daybreak helps you spend a few minutes scrolling and feel genuinely better about the world.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## ✨ Features
+
+- 📱 **Full-Screen Scroll-Snap Feed**: Mobile-first, immersive TikTok-style card feed with auto-fetching infinite pagination.
+- 📖 **In-App Expanded View**: Tap any card to open a detailed view with the full summary and direct link to the original publisher.
+- 🎯 **Positivity Scoring & Ranking**: AI-powered pipeline scores article positivity and ranks feed items by a freshness + positivity algorithm (`positivity * recency_decay`).
+- 🏷️ **Category Filtering**: Filter news across Science, Conservation, Health, Community, Technology, and acts of Generosity.
+- 💖 **Interactive Reactions**: Express reactions (Heart, Praise, Sparkles, Mind Blown, Warmth) with atomic counter tracking.
+- 🔖 **Bookmark & Save**: Bookmark stories locally to revisit anytime on the `/saved` page.
+- 🤖 **Automated AI Ingestion**: Scheduled background job (via GitHub Actions) fetches curated RSS feeds, filters for positive news, and summarizes them using Claude 3.5 Haiku.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router, React 19)
+- **Styling & Motion**: [Tailwind CSS v4](https://tailwindcss.com/), [Framer Motion](https://motion.dev/)
+- **Database**: [Neon Serverless Postgres](https://neon.tech/) with [Drizzle ORM](https://orm.drizzle.team/)
+- **AI Pipeline**: [Anthropic Claude SDK](https://www.anthropic.com/) (`claude-haiku-4-5`)
+- **RSS Parser**: `rss-parser`
+- **Automation**: GitHub Actions (Cron schedule ~4×/day)
+
+---
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+
+- Node.js 20+
+- `pnpm` (or `npm` / `yarn`)
+- Neon Postgres database connection string
+- Anthropic API key (for AI ingestion)
+
+### 2. Environment Setup
+
+Copy `.env.local` or create one with the following variables:
+
+```env
+DATABASE_URL=postgresql://user:password@ep-xxx.neon.tech/neondb?sslmode=require
+ANTHROPIC_API_KEY=your_anthropic_api_key
+CRON_SECRET=your_generated_cron_secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Installation & Database Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Install dependencies
+pnpm install
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Push database schema to Neon
+pnpm db:push
 
-## Learn More
+# (Optional) Seed database with initial stories
+pnpm seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Running Locally
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## ⚙️ Ingestion Pipeline & Scripts
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `pnpm dev` — Run development server
+- `pnpm build` — Build production application
+- `pnpm db:push` — Push Drizzle schema changes to database
+- `pnpm db:studio` — Open Drizzle Studio to inspect database records
+- `pnpm seed` — Run local seed script to inject test stories
+
+To manually trigger the content ingestion endpoint:
+
+```bash
+curl -X POST http://localhost:3000/api/ingest \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
+
+---
+
+## 📄 License
+
+MIT
