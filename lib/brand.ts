@@ -7,7 +7,7 @@ export const BRAND = {
   tagline: 'The world is better than your feed says.',
   description:
     'A positive-only news feed. Good things happen every day — scroll through them here.',
-  url: 'https://daybreak.news', // update when domain is set
+  url: 'https://daybreak-rosy.vercel.app',
 } as const
 
 /** Palette tokens — mirror of globals.css @theme values */
