@@ -48,3 +48,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# local Codex Security scan artifacts
+/codex-security-report-2026-07-02/

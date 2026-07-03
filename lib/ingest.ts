@@ -13,10 +13,22 @@ import { stories } from '@/db/schema'
 import { analyzeStory } from './ai'
 import { computeScore } from './scoring'
 import { SOURCES } from './sources'
-import { inArray, lt, eq, sql, not } from 'drizzle-orm'
+import { inArray, lt, sql } from 'drizzle-orm'
 
 const RETENTION_DAYS = 40
 const rssParser = new Parser({ timeout: 10_000 })
+
+function normalizeHttpUrl(rawUrl: string, options: { httpsOnly?: boolean } = {}): string | undefined {
+  try {
+    const url = new URL(rawUrl)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined
+    if (options.httpsOnly && url.protocol !== 'https:') return undefined
+    url.hash = ''
+    return url.toString()
+  } catch {
+    return undefined
+  }
+}
 
 /** SHA-256 hex of the canonicalized URL (no trailing slash, lowercase scheme+host) */
 function urlHash(rawUrl: string): string {
@@ -33,16 +45,16 @@ function urlHash(rawUrl: string): string {
 function extractImage(item: Parser.Item): string | undefined {
   // Standard media enclosure (audio/image podcasts, photo feeds)
   if (item.enclosure?.url && item.enclosure.type?.startsWith('image/')) {
-    return item.enclosure.url
+    return normalizeHttpUrl(item.enclosure.url, { httpsOnly: true })
   }
   // Some feeds use enclosure without MIME type
   if (item.enclosure?.url && item.enclosure.url.match(/\.(jpg|jpeg|png|webp|gif)(\?|$)/i)) {
-    return item.enclosure.url
+    return normalizeHttpUrl(item.enclosure.url, { httpsOnly: true })
   }
   // rss-parser puts media:content items here sometimes
   const anyItem = item as Record<string, unknown>
   const mediaContent = anyItem['media:content'] as { $?: { url?: string } } | undefined
-  if (mediaContent?.$?.url) return mediaContent.$.url
+  if (mediaContent?.$?.url) return normalizeHttpUrl(mediaContent.$.url, { httpsOnly: true })
   return undefined
 }
 
@@ -81,14 +93,17 @@ export async function runIngest(): Promise<IngestResult> {
       for (const item of feed.items.slice(0, 20)) {
         if (!item.link) continue
 
+        const sourceUrl = normalizeHttpUrl(item.link)
+        if (!sourceUrl) continue
+
         const pubDate = item.pubDate ? new Date(item.pubDate) : new Date()
         const description = item.contentSnippet ?? item.content ?? item.summary ?? item.title ?? ''
 
         candidates.push({
           title: item.title ?? 'Untitled',
           description: description.slice(0, 1500),
-          sourceUrl: item.link,
-          urlHash: urlHash(item.link),
+          sourceUrl,
+          urlHash: urlHash(sourceUrl),
           imageUrl: extractImage(item),
           publishedAt: isNaN(pubDate.getTime()) ? new Date() : pubDate,
           sourceName: source.name,

@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { useState } from 'react'
-import type { StoryCategory } from '@/lib/brand'
 
 const CATEGORY_GLYPHS: Record<string, string> = {
   Science:     '🔬',
@@ -58,6 +57,8 @@ export function HeroImage({ src, alt, category, priority = false }: HeroImagePro
       alt={alt}
       fill
       sizes="100vw"
+      unoptimized
+      referrerPolicy="no-referrer"
       style={{ objectFit: 'cover' }}
       onError={() => setFailed(true)}
       priority={priority}
