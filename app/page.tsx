@@ -9,6 +9,7 @@ import { Feed } from '@/components/Feed'
 import { TopBar } from '@/components/TopBar'
 import { CategoryChips } from '@/components/CategoryChips'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { Sky } from '@/components/Sky'
 import { CATEGORIES, type StoryCategory } from '@/lib/brand'
 import type { FeedPage } from '@/lib/types'
 
@@ -74,19 +75,34 @@ export default async function Home({
 
   return (
     <main style={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
+      <Sky />
+      {/* Top scrim — keeps floating chrome legible while cards scroll beneath */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '7.5rem',
+          zIndex: 40,
+          pointerEvents: 'none',
+          background: 'linear-gradient(to bottom, rgba(11, 16, 34, 0.85) 0%, rgba(11, 16, 34, 0.55) 55%, transparent 100%)',
+        }}
+      />
       <TopBar />
       {/* Category chips — useSearchParams() requires Suspense boundary */}
-      <div style={{ position: 'fixed', top: '3.25rem', left: 0, right: 0, zIndex: 40, paddingTop: '0.5rem', background: 'var(--color-surface)' }}>
+      <div style={{ position: 'fixed', top: '3.25rem', left: 0, right: 0, zIndex: 45, paddingTop: '0.5rem' }}>
         <Suspense fallback={null}>
           <CategoryChips />
         </Suspense>
       </div>
-      {/* Feed starts below TopBar + chips (~3.25rem + 2.5rem) */}
-      <div style={{ paddingTop: '5.75rem', height: '100dvh', overflow: 'hidden' }}>
-        <ErrorBoundary>
-          <Feed initialPage={initialPage} category={category} />
-        </ErrorBoundary>
-      </div>
+      {/* Feed scrolls the full viewport; cards pad themselves below the chrome */}
+      <ErrorBoundary>
+        {/* Keyed by category: switching filters must reset the feed's
+            accumulated pages, not append to the previous category's list */}
+        <Feed key={category ?? 'all'} initialPage={initialPage} category={category} />
+      </ErrorBoundary>
     </main>
   )
 }

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { REACTIONS } from '@/lib/brand'
-import { hasPressed, recordPress } from '@/lib/local-store'
+import { hasPressed, recordPress, subscribeLocalStore } from '@/lib/local-store'
 import type { StoryWithReactions } from '@/lib/types'
 import type { ReactionType } from '@/lib/brand'
 
@@ -12,52 +12,50 @@ interface ReactionBarProps {
 }
 
 /**
+ * Presses made this session, keyed by `storyId:type`. The bar renders in two
+ * places (story card + expanded view) from the same server snapshot, so a
+ * module-level record keeps their optimistic +1s in agreement. Cleared on
+ * reload — by then the server count includes the press.
+ */
+const sessionBumps = new Set<string>()
+const bumpKey = (storyId: number, type: ReactionType) => `${storyId}:${type}`
+
+/**
  * Row of emoji reaction buttons.
  *
- * - Counts come from the server (via the story prop).
- * - Optimistic UI: count updates immediately on tap.
- * - localStorage: tracks pressed state per device; prevents re-press.
- * - POST /api/reactions: increments the server counter.
+ * - Counts come from the server (via the story prop) plus this session's
+ *   optimistic bumps — no local count state to drift between instances.
+ * - Pressed state reads localStorage through useSyncExternalStore; SSR
+ *   renders unpressed and the client snapshot corrects it after hydration.
+ * - POST /api/reactions: increments the server counter (fire-and-forget).
  */
 export function ReactionBar({ story }: ReactionBarProps) {
-  // Local counts start from server values; optimistic updates layer on top
-  const [counts, setCounts] = useState<Partial<Record<ReactionType, number>>>(
-    story.reactions ?? {},
+  // Stable string snapshot ("wow,hopeful") so Object.is comparison works
+  const pressedSnapshot = useSyncExternalStore(
+    subscribeLocalStore,
+    () => REACTIONS.filter((r) => hasPressed(story.id, r.type)).map((r) => r.type).join(','),
+    () => '',
   )
-  const [pressed, setPressed] = useState<Set<ReactionType>>(new Set())
+  const pressed = useMemo(
+    () => new Set(pressedSnapshot.split(',').filter(Boolean) as ReactionType[]),
+    [pressedSnapshot],
+  )
 
-  // Hydrate pressed state from localStorage after mount
-  useEffect(() => {
-    const stored = new Set<ReactionType>()
-    for (const r of REACTIONS) {
-      if (hasPressed(story.id, r.type)) stored.add(r.type as ReactionType)
-    }
-    setPressed(stored)
-  }, [story.id])
-
-  async function handleReaction(type: ReactionType) {
+  function handleReaction(type: ReactionType) {
     if (pressed.has(type)) return // already pressed — no-op
 
-    // Optimistic update
-    setCounts((prev) => ({
-      ...prev,
-      [type]: (prev[type] ?? 0) + 1,
-    }))
-    setPressed((prev) => new Set([...prev, type]))
-
-    // Persist press locally
+    // Optimistic: bump before recordPress so the emitted re-render sees it
+    sessionBumps.add(bumpKey(story.id, type))
     recordPress(story.id, type)
 
     // Fire-and-forget server increment — optimistic already applied
-    try {
-      await fetch('/api/reactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId: story.id, reactionType: type }),
-      })
-    } catch {
-      // Server failure: leave optimistic update in place (count is already in localStorage)
-    }
+    fetch('/api/reactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ storyId: story.id, reactionType: type }),
+    }).catch(() => {
+      // Server failure: leave optimistic update in place (press is already in localStorage)
+    })
   }
 
   return (
@@ -71,8 +69,10 @@ export function ReactionBar({ story }: ReactionBarProps) {
       }}
     >
       {REACTIONS.map((r) => {
-        const isPressed = pressed.has(r.type as ReactionType)
-        const count = counts[r.type as ReactionType] ?? 0
+        const type = r.type as ReactionType
+        const isPressed = pressed.has(type)
+        const count =
+          (story.reactions?.[type] ?? 0) + (sessionBumps.has(bumpKey(story.id, type)) ? 1 : 0)
 
         return (
           <motion.button
@@ -80,25 +80,27 @@ export function ReactionBar({ story }: ReactionBarProps) {
             type="button"
             aria-label={`${r.label}${isPressed ? ' (reacted)' : ''}`}
             aria-pressed={isPressed}
-            onClick={() => handleReaction(r.type as ReactionType)}
+            onClick={() => handleReaction(type)}
             whileTap={{ scale: 0.88 }}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.4rem 0.75rem',
+              gap: '0.4rem',
+              padding: '0.4rem 0.8rem',
               borderRadius: '999px',
               border: isPressed
-                ? '1.5px solid var(--color-coral)'
-                : '1.5px solid var(--color-border)',
+                ? '1px solid var(--color-dawn)'
+                : '1px solid var(--color-line)',
               background: isPressed
-                ? 'rgba(255, 138, 91, 0.12)'
-                : 'var(--color-card)',
+                ? 'rgba(255, 174, 112, 0.16)'
+                : 'rgba(22, 31, 61, 0.55)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               cursor: isPressed ? 'default' : 'pointer',
               fontSize: '0.875rem',
               fontFamily: 'var(--font-sans)',
-              color: isPressed ? 'var(--color-coral)' : 'var(--color-muted)',
-              fontWeight: isPressed ? 600 : 400,
+              color: isPressed ? 'var(--color-dawn)' : 'var(--color-mist-bright)',
+              fontWeight: isPressed ? 700 : 500,
               transition: 'border-color 0.15s ease, background 0.15s ease, color 0.15s ease',
               userSelect: 'none',
             }}

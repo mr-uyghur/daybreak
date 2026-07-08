@@ -10,14 +10,15 @@ export const BRAND = {
   url: 'https://daybreak-rosy.vercel.app',
 } as const
 
-/** Palette tokens — mirror of globals.css @theme values */
+/** Palette tokens — mirror of globals.css @theme values (blue-hour system) */
 export const COLORS = {
-  cream: '#FFFDF7',
-  ink: '#2B2722',
-  charcoal: '#1A1714',
-  coral: '#FF8A5B',
-  amber: '#FFC15E',
-  sage: '#7BA88A',
+  night: '#0B1022',
+  sheet: '#161F3D',
+  ink: '#F5F1E8',
+  mist: '#B7BFDA',
+  dawn: '#FFB784',
+  dawnDeep: '#FFAE70',
+  rose: '#F09CA8',
 } as const
 
 /** Reaction definitions — single source of truth for emoji + labels */

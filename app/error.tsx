@@ -24,23 +24,24 @@ export default function Error({
         gap: '1.25rem',
         padding: '2rem',
         textAlign: 'center',
-        color: 'var(--color-muted)',
+        color: 'var(--color-mist)',
         fontFamily: 'var(--font-sans)',
+        background: 'linear-gradient(to bottom, var(--color-sky1-top), var(--color-sky1-bot))',
       }}
     >
-      <span style={{ fontSize: '2rem' }}>🌅</span>
+      <hr className="horizon-line" style={{ width: 'min(12rem, 50vw)' }} />
       <p style={{ margin: 0, maxWidth: '28ch', lineHeight: 1.5 }}>
         Something went wrong loading the feed.
       </p>
       <button
         onClick={reset}
         style={{
-          padding: '0.65rem 1.25rem',
-          borderRadius: '0.625rem',
-          background: 'linear-gradient(135deg, var(--color-coral) 0%, var(--color-amber) 100%)',
-          color: '#fff',
+          padding: '0.65rem 1.5rem',
+          borderRadius: '999px',
+          background: 'var(--color-dawn-deep)',
+          color: '#141A33',
           fontFamily: 'var(--font-sans)',
-          fontWeight: 600,
+          fontWeight: 700,
           fontSize: '0.9rem',
           border: 'none',
           cursor: 'pointer',

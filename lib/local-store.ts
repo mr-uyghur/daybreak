@@ -25,6 +25,21 @@ function setJSON<T>(key: string, value: T): void {
   }
 }
 
+// ─── Change subscription ─────────────────────────────────────────────────────
+// Lets components read this store via useSyncExternalStore instead of
+// hydrating with setState-in-effect. Every write below calls emit().
+
+const listeners = new Set<() => void>()
+
+export function subscribeLocalStore(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+
+function emit(): void {
+  for (const listener of listeners) listener()
+}
+
 // ─── Saved / bookmarked story IDs ────────────────────────────────────────────
 
 const SAVED_KEY = 'daybreak:saved'
@@ -40,13 +55,14 @@ export function isSaved(id: number): boolean {
 export function toggleSaved(id: number): boolean {
   const ids = getSavedIds()
   const idx = ids.indexOf(id)
-  if (idx === -1) {
+  const nowSaved = idx === -1
+  if (nowSaved) {
     setJSON(SAVED_KEY, [...ids, id])
-    return true // now saved
   } else {
     setJSON(SAVED_KEY, ids.filter((x) => x !== id))
-    return false // now unsaved
   }
+  emit()
+  return nowSaved
 }
 
 // ─── Pressed reaction types ───────────────────────────────────────────────────
@@ -74,5 +90,6 @@ export function recordPress(storyId: number, reactionType: string): boolean {
   if (current.has(reactionType)) return false
   current.add(reactionType)
   setJSON(pressedKey(storyId), Array.from(current))
+  emit()
   return true
 }

@@ -13,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: BRAND.description,
     start_url: '/',
     display: 'standalone',
-    background_color: '#FFFDF7',
-    theme_color: '#FF8A5B',
+    background_color: '#0B1022',
+    theme_color: '#0B1022',
     orientation: 'portrait',
     icons: [
       {

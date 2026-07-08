@@ -1,27 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { isSaved, toggleSaved } from '@/lib/local-store'
+import { useSyncExternalStore } from 'react'
+import { isSaved, toggleSaved, subscribeLocalStore } from '@/lib/local-store'
 
 interface SaveButtonProps {
   storyId: number
 }
 
 /**
- * Bookmark toggle — saves/unsaves a story ID to localStorage.
- * State hydrates after mount (SSR guard).
+ * Star toggle — saves/unsaves a story ID to localStorage.
+ * Reads through useSyncExternalStore: SSR renders unsaved, the client
+ * snapshot corrects it after hydration, and every toggle re-renders all
+ * mounted instances for this story.
  */
 export function SaveButton({ storyId }: SaveButtonProps) {
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    setSaved(isSaved(storyId))
-  }, [storyId])
+  const saved = useSyncExternalStore(
+    subscribeLocalStore,
+    () => isSaved(storyId),
+    () => false,
+  )
 
   function handleToggle(e: React.MouseEvent) {
     e.stopPropagation()
-    const next = toggleSaved(storyId)
-    setSaved(next)
+    toggleSaved(storyId)
   }
 
   return (
@@ -37,16 +38,22 @@ export function SaveButton({ storyId }: SaveButtonProps) {
         width: '2.25rem',
         height: '2.25rem',
         borderRadius: '50%',
-        border: '1.5px solid var(--color-border)',
-        background: saved ? 'rgba(255, 193, 94, 0.15)' : 'var(--color-card)',
+        border: saved ? '1px solid var(--color-dawn)' : '1px solid var(--color-line)',
+        background: saved ? 'rgba(255, 174, 112, 0.16)' : 'rgba(22, 31, 61, 0.55)',
+        color: saved ? 'var(--color-dawn)' : 'var(--color-mist-bright)',
         cursor: 'pointer',
-        fontSize: '1.1rem',
-        transition: 'background 0.15s ease, border-color 0.15s ease',
-        borderColor: saved ? 'var(--color-amber)' : undefined,
+        transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
         flexShrink: 0,
       }}
     >
-      {saved ? '🔖' : '🏷️'}
+      <svg width="15" height="15" viewBox="0 0 24 24" fill={saved ? 'currentColor' : 'none'} aria-hidden>
+        <path
+          d="M12 2.5l2.6 6.1 6.6.55-5 4.35 1.5 6.5L12 16.5 6.3 20l1.5-6.5-5-4.35 6.6-.55L12 2.5z"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+        />
+      </svg>
     </button>
   )
 }

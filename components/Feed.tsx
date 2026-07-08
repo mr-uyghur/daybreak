@@ -4,7 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { StoryCard } from './StoryCard'
 import { CardSkeleton } from './ui/Skeleton'
 import { ExpandedView } from './ExpandedView'
-import type { StoryWithReactions, FeedPage } from '@/lib/types'
+import { setSkyProgress } from './Sky'
+import type { FeedPage } from '@/lib/types'
 
 interface FeedProps {
   /** Pre-fetched first page from the server (no loading flash on first render) */
@@ -18,6 +19,8 @@ interface FeedProps {
  *
  * - Renders one card per 100dvh "page" with CSS scroll-snap.
  * - Infinite-scrolls via an IntersectionObserver sentinel at the bottom.
+ * - Drives the sky: scroll depth advances `--sky-t` from night to daybreak
+ *   (rAF-throttled, opacity-only crossfades — no paint during scroll).
  * - Expanded view opens as a full-screen overlay when a card is tapped.
  */
 export function Feed({ initialPage, category }: FeedProps) {
@@ -25,6 +28,8 @@ export function Feed({ initialPage, category }: FeedProps) {
   const [loading, setLoading]     = useState(false)
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const sentinelRef               = useRef<HTMLDivElement>(null)
+  const scrollerRef               = useRef<HTMLDivElement>(null)
+  const skyTicking                = useRef(false)
 
   const allStories = pages.flatMap((p) => p.stories)
   const lastCursor = pages[pages.length - 1]?.nextCursor ?? null
@@ -64,6 +69,18 @@ export function Feed({ initialPage, category }: FeedProps) {
     return () => observer.disconnect()
   }, [loadMore])
 
+  /** Advance the sky with scroll depth (fractional cards scrolled) */
+  const handleScroll = useCallback(() => {
+    if (skyTicking.current) return
+    skyTicking.current = true
+    requestAnimationFrame(() => {
+      skyTicking.current = false
+      const el = scrollerRef.current
+      if (!el || el.clientHeight === 0) return
+      setSkyProgress(el.scrollTop / el.clientHeight)
+    })
+  }, [])
+
   const expandedStory = expandedId !== null
     ? allStories.find((s) => s.id === expandedId) ?? null
     : null
@@ -78,6 +95,8 @@ export function Feed({ initialPage, category }: FeedProps) {
     <>
       {/* Scroll-snap container */}
       <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
         style={{
           height: '100dvh',
           overflowY: 'scroll',
@@ -101,25 +120,39 @@ export function Feed({ initialPage, category }: FeedProps) {
         {/* IntersectionObserver sentinel — triggers next page load */}
         <div ref={sentinelRef} style={{ height: 1, flexShrink: 0 }} aria-hidden />
 
-        {/* End-of-feed message */}
+        {/* End of feed — the reader reached daybreak */}
         {!hasMore && !loading && allStories.length > 0 && (
           <div
             style={{
-              height: '40dvh',
+              height: '55dvh',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem',
+              gap: '1rem',
               padding: '2rem',
               textAlign: 'center',
-              color: 'var(--color-muted)',
               fontFamily: 'var(--font-sans)',
+              // Snap target — without this, mandatory snapping bounces back
+              // to the last card and this state is unreachable
+              scrollSnapAlign: 'end',
             }}
           >
-            <span style={{ fontSize: '1.5rem' }}>✦</span>
-            <p style={{ margin: 0, fontSize: '0.9rem' }}>
-              You've reached the end — check back soon for more good news.
+            <hr className="horizon-line" style={{ width: 'min(16rem, 60vw)' }} />
+            <p
+              style={{
+                margin: 0,
+                fontFamily: 'var(--font-serif)',
+                fontSize: '1.2rem',
+                lineHeight: 1.35,
+                color: 'var(--color-ink)',
+                maxWidth: '22ch',
+              }}
+            >
+              You made it to daybreak.
+            </p>
+            <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.5, color: 'var(--color-mist-bright)', maxWidth: '30ch' }}>
+              That&apos;s every story for now — new good news lands throughout the day.
             </p>
           </div>
         )}
@@ -148,13 +181,13 @@ function EmptyState() {
         gap: '1rem',
         padding: '2rem',
         textAlign: 'center',
-        color: 'var(--color-muted)',
+        color: 'var(--color-mist)',
         fontFamily: 'var(--font-sans)',
       }}
     >
-      <span style={{ fontSize: '2rem' }}>🌅</span>
+      <hr className="horizon-line" style={{ width: 'min(12rem, 50vw)' }} />
       <p style={{ margin: 0, maxWidth: '28ch', lineHeight: 1.5 }}>
-        The good news is loading — check back soon.
+        The first stories are on their way — check back soon.
       </p>
     </div>
   )

@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CATEGORIES } from '@/lib/brand'
 
 /**
- * Horizontal-scrolling category filter bar.
+ * Horizontal-scrolling category filter bar — ghost pills on the sky.
  * Active category is stored in the URL: /?category=Science
  * "All" clears the param.
  *
@@ -32,15 +32,16 @@ export function CategoryChips() {
     <div
       role="group"
       aria-label="Filter by category"
+      className="no-scrollbar"
       style={{
         display: 'flex',
         gap: '0.5rem',
         overflowX: 'auto',
-        padding: '0 1rem 0.5rem',
-        scrollbarWidth: 'none',
-        msOverflowStyle: 'none',
-        // Hide webkit scrollbar
+        padding: '0 1.25rem 0.5rem',
         WebkitOverflowScrolling: 'touch',
+        // Align with the centered card column on wide screens
+        maxWidth: '36rem',
+        marginInline: 'auto',
       }}
     >
       {chips.map(({ label, value }) => {
@@ -54,21 +55,23 @@ export function CategoryChips() {
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              padding: '0.3rem 0.875rem',
+              padding: '0.32rem 0.85rem',
               borderRadius: '999px',
               border: isActive
-                ? '1.5px solid var(--color-coral)'
-                : '1.5px solid var(--color-border)',
+                ? '1px solid var(--color-dawn-deep)'
+                : '1px solid var(--color-line)',
               background: isActive
-                ? 'linear-gradient(135deg, var(--color-coral) 0%, var(--color-amber) 100%)'
-                : 'var(--color-card)',
-              color: isActive ? '#fff' : 'var(--color-muted)',
+                ? 'var(--color-dawn-deep)'
+                : 'rgba(22, 31, 61, 0.55)',
+              color: isActive ? '#141A33' : 'var(--color-mist-bright)',
               fontFamily: 'var(--font-sans)',
               fontSize: '0.8rem',
-              fontWeight: isActive ? 600 : 400,
+              fontWeight: isActive ? 700 : 500,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               flexShrink: 0,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease',
             }}
           >

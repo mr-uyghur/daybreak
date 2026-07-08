@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react'
 import { HeroImage } from './HeroImage'
-import { CategoryPill } from './ui/CategoryPill'
+import { ReactionBar } from './ReactionBar'
 import type { StoryWithReactions } from '@/lib/types'
 
 interface StoryCardProps {
@@ -14,14 +14,13 @@ interface StoryCardProps {
 }
 
 /**
- * Full-screen story card — one per scroll-snap page.
+ * Full-screen story card — one per scroll-snap page, composed on the sky.
  *
- * Layout: hero image (~55vh) / rounded content panel overlap (~45dvh).
- * Tap the card body to open expanded view. Reaction / share / save bar
- * is in the ExpandedView and the in-card row below (M4).
+ * Text-first: eyebrow → serif headline → summary → reactions, with the
+ * image framed low on the card like the sun sitting at the horizon.
+ * Tap anywhere (except the reaction buttons) to open the expanded view.
  */
 export function StoryCard({ story, onTap, index }: StoryCardProps) {
-  // Format the source domain for display
   const sourceDomain = (() => {
     try { return new URL(story.sourceUrl).hostname.replace(/^www\./, '') }
     catch { return story.sourceUrl }
@@ -44,80 +43,61 @@ export function StoryCard({ story, onTap, index }: StoryCardProps) {
         flexShrink: 0,
         position: 'relative',
         cursor: 'pointer',
-        background: 'var(--color-card)',
-        overflowY: 'hidden',
         scrollSnapAlign: 'start',
+        display: 'flex',
+        justifyContent: 'center',
       }}
       role="button"
       tabIndex={0}
       aria-label={`Read story: ${story.headline}`}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap() } }}
     >
-      {/* ── Hero image ─────────────────────────────────────────────────────── */}
       <div
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '58%',
-          overflow: 'hidden',
-        }}
-      >
-        <HeroImage
-          src={story.imageUrl}
-          alt={story.headline}
-          category={story.category}
-          priority={index === 0}
-        />
-        {/* Gradient scrim so the content panel blends in */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '40%',
-            background: 'linear-gradient(to bottom, transparent, var(--color-card))',
-          }}
-        />
-        {/* Category pill — floated over hero */}
-        <div style={{ position: 'absolute', top: '1rem', left: '1rem' }}>
-          <CategoryPill category={story.category} />
-        </div>
-      </div>
-
-      {/* ── Content panel ──────────────────────────────────────────────────── */}
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: '46%',
-          background: 'var(--color-card)',
-          borderTopLeftRadius: '1.25rem',
-          borderTopRightRadius: '1.25rem',
-          padding: '1.25rem 1rem 1rem',
+          width: '100%',
+          maxWidth: '34rem',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.5rem',
-          overflow: 'hidden',
+          gap: '0.875rem',
+          padding: '6.75rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom))',
         }}
       >
-        {/* Headline */}
+        {/* Eyebrow — category · source · date */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: '0.5rem',
+            fontSize: '0.72rem',
+            fontFamily: 'var(--font-sans)',
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: 'var(--color-mist)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+          }}
+        >
+          <span style={{ color: 'var(--color-dawn)', fontWeight: 700 }}>
+            {story.category}
+          </span>
+          <span aria-hidden style={{ opacity: 0.5 }}>·</span>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{sourceDomain}</span>
+          <span aria-hidden style={{ opacity: 0.5 }}>·</span>
+          <span>{publishedLabel}</span>
+        </div>
+
+        {/* Headline — the hero of the card */}
         <h2
           style={{
             fontFamily: 'var(--font-serif)',
-            fontWeight: 700,
-            fontSize: 'clamp(1.1rem, 4vw, 1.4rem)',
-            lineHeight: 1.25,
-            color: 'var(--color-on-surface)',
+            fontWeight: 400,
+            fontSize: 'clamp(1.45rem, 5.5vw, 2rem)',
+            lineHeight: 1.18,
+            color: 'var(--color-ink)',
             margin: 0,
-            // Clamp to 3 lines
             display: '-webkit-box',
-            WebkitLineClamp: 3,
+            WebkitLineClamp: 4,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}
@@ -125,16 +105,16 @@ export function StoryCard({ story, onTap, index }: StoryCardProps) {
           {story.headline}
         </h2>
 
-        {/* Summary (2-line teaser) */}
+        {/* Summary teaser */}
         <p
           style={{
             fontFamily: 'var(--font-sans)',
-            fontSize: '0.875rem',
-            lineHeight: 1.55,
-            color: 'var(--color-muted)',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            color: 'var(--color-mist)',
             margin: 0,
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}
@@ -142,25 +122,49 @@ export function StoryCard({ story, onTap, index }: StoryCardProps) {
           {story.summary}
         </p>
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
+        {/* Reactions — right on the card; taps must not open the story */}
+        <div onClick={(e) => e.stopPropagation()} style={{ alignSelf: 'flex-start' }}>
+          <ReactionBar story={story} />
+        </div>
 
-        {/* Source + date footer */}
+        <div style={{ flex: '0 1 0.5rem' }} />
+
+        {/* Hero image — a window at the horizon */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            fontSize: '0.75rem',
-            color: 'var(--color-muted)',
-            fontFamily: 'var(--font-sans)',
-            opacity: 0.7,
+            position: 'relative',
+            flex: '1 1 auto',
+            minHeight: '7rem',
+            borderRadius: '1.25rem',
+            overflow: 'hidden',
+            boxShadow: '0 0 0 1px var(--color-line), 0 24px 60px -20px rgba(5, 8, 20, 0.8)',
           }}
         >
-          <span>{sourceDomain}</span>
-          <span aria-hidden>·</span>
-          <span>{publishedLabel}</span>
-          <span style={{ marginLeft: 'auto', fontSize: '0.8rem' }}>Tap to read ↗</span>
+          <HeroImage
+            src={story.imageUrl}
+            alt={story.headline}
+            category={story.category}
+            priority={index === 0}
+          />
+          {/* Read affordance — quiet pill over the image */}
+          <span
+            style={{
+              position: 'absolute',
+              right: '0.75rem',
+              bottom: '0.75rem',
+              padding: '0.3rem 0.75rem',
+              borderRadius: '999px',
+              background: 'rgba(11, 16, 34, 0.72)',
+              color: 'var(--color-ink)',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.78rem',
+              fontWeight: 600,
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+            }}
+          >
+            Read story ↗
+          </span>
         </div>
       </div>
     </motion.article>

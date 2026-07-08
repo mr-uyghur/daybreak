@@ -9,7 +9,7 @@ interface ShareButtonProps {
 
 /**
  * Share button: uses Web Share API on mobile, falls back to clipboard copy.
- * Shows a transient "Copied!" toast on fallback.
+ * Shows a transient "Copied!" label on fallback.
  */
 export function ShareButton({ title, url }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
@@ -45,19 +45,28 @@ export function ShareButton({ title, url }: ShareButtonProps) {
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '0.35rem',
+        gap: '0.4rem',
         padding: '0.4rem 0.9rem',
         borderRadius: '999px',
-        border: '1.5px solid var(--color-border)',
-        background: 'var(--color-card)',
+        border: '1px solid var(--color-line)',
+        background: 'rgba(22, 31, 61, 0.55)',
         cursor: 'pointer',
-        fontSize: '0.875rem',
+        fontSize: '0.85rem',
+        fontWeight: 600,
         fontFamily: 'var(--font-sans)',
-        color: 'var(--color-muted)',
+        color: 'var(--color-mist-bright)',
         transition: 'border-color 0.15s ease',
       }}
     >
-      <span role="img" aria-hidden>🔗</span>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path
+          d="M12 15V3m0 0L7 8m5-5l5 5M4 14v5a2 2 0 002 2h12a2 2 0 002-2v-5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
       <span>{copied ? 'Copied!' : 'Share'}</span>
     </button>
   )

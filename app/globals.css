@@ -1,48 +1,133 @@
 @import "tailwindcss";
 
-/* ─── Design tokens ─────────────────────────────────────────────────────────── */
+/* ─── Design tokens — the "blue hour" system ─────────────────────────────────
+   Daybreak is the sky just before sunrise: deep indigo overhead, first warm
+   light at the horizon. The app is dark-first by identity, not by theme —
+   the sky brightens with scroll depth (see .sky-* layers + --sky-t). */
 @theme {
   /* Typography */
-  --font-sans:  var(--font-inter),     ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-fraunces),  ui-serif, Georgia, serif;
+  --font-sans:  var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-young-serif), ui-serif, Georgia, serif;
 
-  /* Brand palette */
-  --color-cream:   #FFFDF7;
-  --color-ink:     #2B2722;
-  --color-charcoal:#1A1714;
-  --color-coral:   #FF8A5B;
-  --color-amber:   #FFC15E;
-  --color-sage:    #7BA88A;
+  /* Sky stages — [zenith, horizon] pairs, night → daybreak */
+  --color-sky0-top: #0B1022;
+  --color-sky0-bot: #1B2340;
+  --color-sky1-top: #101731;
+  --color-sky1-bot: #2A3457;
+  --color-sky2-top: #151E3E;
+  --color-sky2-bot: #3A4570;
+  --color-sky3-top: #1A2449;
+  --color-sky3-bot: #4A5486;
 
-  /* Semantic surface tokens */
-  --color-surface:      light-dark(var(--color-cream),   var(--color-charcoal));
-  --color-on-surface:   light-dark(var(--color-ink),     #F5F0EB);
-  --color-accent:       var(--color-coral);
-  --color-accent-warm:  var(--color-amber);
-  --color-muted:        light-dark(#8C7B72,              #8C7B72);
-  --color-card:         light-dark(#FFFFFF,              #231F1C);
-  --color-border:       light-dark(#E8E0D6,              #332E2A);
+  /* Ink — warm moonlight white, AA on every sky stage */
+  --color-ink:         #F5F1E8;
+  /* Mist — secondary text; bright variant for text near the lighter horizon */
+  --color-mist:        #B7BFDA;
+  --color-mist-bright: #CDD3E8;
+
+  /* First light — the warm accent. `dawn` for text/strokes on dark,
+     `dawn-deep` for filled surfaces (pair with night ink #141A33). */
+  --color-dawn:      #FFB784;
+  --color-dawn-deep: #FFAE70;
+  --color-rose:      #F09CA8; /* decorative gradient partner only */
+
+  /* Raised surfaces (sheets, pills) + hairlines */
+  --color-night: #0B1022;
+  --color-sheet: #161F3D;
+  --color-line:  rgba(205, 211, 232, 0.16);
 }
 
-/* ─── Base ───────────────────────────────────────────────────────────────────── */
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 :root {
-  color-scheme: light dark;
+  /* Sky progress: 0 = night, 3 = daybreak. Driven by feed scroll. */
+  --sky-t: 0;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 html {
-  background-color: var(--color-surface);
-  color: var(--color-on-surface);
+  background-color: var(--color-night);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scroll-snap container resets */
-* {
-  box-sizing: border-box;
+:focus-visible {
+  outline: 2px solid var(--color-dawn);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-/* ─── Skeleton shimmer ───────────────────────────────────────────────────────── */
+/* ─── The sky — fixed layers behind everything ───────────────────────────────
+   Four gradient stages stacked; each fades in as --sky-t crosses its index.
+   Opacity-only crossfade = compositor work, no repaint during scroll. */
+.sky-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+.sky-stage-0 { background: linear-gradient(to bottom, var(--color-sky0-top), var(--color-sky0-bot)); }
+.sky-stage-1 {
+  background: linear-gradient(to bottom, var(--color-sky1-top), var(--color-sky1-bot));
+  opacity: clamp(0, var(--sky-t), 1);
+}
+.sky-stage-2 {
+  background: linear-gradient(to bottom, var(--color-sky2-top), var(--color-sky2-bot));
+  opacity: clamp(0, calc(var(--sky-t) - 1), 1);
+}
+.sky-stage-3 {
+  background: linear-gradient(to bottom, var(--color-sky3-top), var(--color-sky3-bot));
+  opacity: clamp(0, calc(var(--sky-t) - 2), 1);
+}
+
+/* Stars — fade out as dawn approaches */
+.sky-stars {
+  z-index: -1;
+  opacity: calc(0.9 - var(--sky-t) * 0.3);
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(245, 241, 232, 0.8), transparent),
+    radial-gradient(1px 1px at 78% 9%,  rgba(245, 241, 232, 0.6), transparent),
+    radial-gradient(1.5px 1.5px at 55% 24%, rgba(245, 241, 232, 0.7), transparent),
+    radial-gradient(1px 1px at 31% 7%,  rgba(245, 241, 232, 0.5), transparent),
+    radial-gradient(1px 1px at 90% 31%, rgba(245, 241, 232, 0.45), transparent),
+    radial-gradient(1.5px 1.5px at 68% 15%, rgba(245, 241, 232, 0.55), transparent),
+    radial-gradient(1px 1px at 42% 33%, rgba(245, 241, 232, 0.4), transparent),
+    radial-gradient(1px 1px at 5% 38%,  rgba(245, 241, 232, 0.5), transparent);
+}
+
+/* First light at the horizon — grows with scroll */
+.sky-glow {
+  z-index: -1;
+  background: radial-gradient(
+    120% 55% at 50% 108%,
+    rgba(255, 174, 112, 0.42) 0%,
+    rgba(240, 156, 168, 0.16) 42%,
+    transparent 70%
+  );
+  opacity: calc(0.12 + var(--sky-t) * 0.29);
+}
+
+/* ─── Horizon line — the brand hairline motif ───────────────────────────── */
+.horizon-line {
+  height: 1px;
+  border: none;
+  margin: 0;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--color-dawn) 35%,
+    var(--color-rose) 65%,
+    transparent
+  );
+  opacity: 0.7;
+}
+
+/* ─── Skeleton shimmer ───────────────────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
@@ -51,29 +136,41 @@ html {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-border) 25%,
-    light-dark(#F0E8DF, #2E2925) 50%,
-    var(--color-border) 75%
+    rgba(205, 211, 232, 0.08) 25%,
+    rgba(205, 211, 232, 0.16) 50%,
+    rgba(205, 211, 232, 0.08) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
   border-radius: 0.5rem;
 }
 
-/* ─── Card hero gradient fallback ───────────────────────────────────────────── */
+/* ─── Hero fallback — a minimal horizon illustration ────────────────────── */
 .hero-fallback {
-  background: linear-gradient(
-    135deg,
-    var(--color-coral) 0%,
-    var(--color-amber) 100%
-  );
+  background:
+    linear-gradient(
+      to bottom,
+      var(--color-sky1-top) 0%,
+      var(--color-sky2-bot) 62%,
+      rgba(255, 174, 112, 0.55) 98%,
+      var(--color-dawn-deep) 100%
+    );
 }
 
-/* ─── Reduced motion ─────────────────────────────────────────────────────────── */
+/* ─── Scrollbar-free horizontal rows (category chips) ────────────────────── */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Reduced motion ─────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
-    background: var(--color-border);
+    background: rgba(205, 211, 232, 0.1);
     background-size: unset;
   }
 }

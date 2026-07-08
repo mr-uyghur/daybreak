@@ -12,27 +12,34 @@ export function Skeleton({
   return <div className={`skeleton ${className}`} style={style} aria-hidden />
 }
 
-/** Full card-shaped skeleton for the feed loading state */
+/** Full card-shaped skeleton matching the text-first card layout */
 export function CardSkeleton() {
   return (
     <div
       style={{
         height: '100dvh',
         display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--color-card)',
+        justifyContent: 'center',
+        scrollSnapAlign: 'start',
       }}
     >
-      {/* Hero image area */}
-      <Skeleton style={{ flex: '0 0 55%', borderRadius: 0 }} />
-      {/* Content area */}
-      <div style={{ flex: 1, padding: '1.25rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <Skeleton style={{ height: '0.75rem', width: '30%' }} />
-        <Skeleton style={{ height: '1.5rem', width: '90%' }} />
-        <Skeleton style={{ height: '1.5rem', width: '80%' }} />
-        <Skeleton style={{ height: '1rem', width: '95%', marginTop: '0.5rem' }} />
-        <Skeleton style={{ height: '1rem', width: '88%' }} />
-        <Skeleton style={{ height: '1rem', width: '75%' }} />
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '34rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.875rem',
+          padding: '6.75rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom))',
+        }}
+      >
+        <Skeleton style={{ height: '0.75rem', width: '45%' }} />
+        <Skeleton style={{ height: '1.9rem', width: '95%' }} />
+        <Skeleton style={{ height: '1.9rem', width: '78%' }} />
+        <Skeleton style={{ height: '0.95rem', width: '92%', marginTop: '0.25rem' }} />
+        <Skeleton style={{ height: '0.95rem', width: '85%' }} />
+        <Skeleton style={{ height: '2.1rem', width: '60%', borderRadius: '999px', marginTop: '0.25rem' }} />
+        <Skeleton style={{ flex: 1, borderRadius: '1.25rem', marginTop: '0.5rem' }} />
       </div>
     </div>
   )

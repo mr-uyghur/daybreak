@@ -2,5 +2,5 @@
 
 ## Session Start
 Read these in order before doing anything else:
-1. `C:\Users\mruyg\.claude\projects\G--Claude-projects-Good-News-App\memory\project_state.md` — current state
-2. `C:\Users\mruyg\.claude\plans\good-news-platform-woolly-finch.md` — implementation plan
+1. `C:\Users\mruyg\vault\memory\good-news\project_state.md` — current state
+2. `C:\Users\mruyg\vault\plans\good-news--token-waste-reduction.md` — active plan (platform build plan is done: `good-news--platform-implementation.md`)

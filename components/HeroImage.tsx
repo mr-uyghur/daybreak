@@ -24,12 +24,13 @@ interface HeroImageProps {
 }
 
 /**
- * Full-bleed hero image with a warm gradient + category glyph fallback.
- * Never crashes on a broken/missing image URL.
+ * Full-bleed hero image. Broken/missing images fall back to a miniature
+ * horizon: night sky fading to first light, with the category glyph rising
+ * like the sun. Never crashes on a bad URL.
  */
 export function HeroImage({ src, alt, category, priority = false }: HeroImageProps) {
   const [failed, setFailed] = useState(!src)
-  const glyph = CATEGORY_GLYPHS[category] ?? '✨'
+  const glyph = CATEGORY_GLYPHS[category] ?? '✦'
 
   if (failed || !src) {
     return (
@@ -41,9 +42,10 @@ export function HeroImage({ src, alt, category, priority = false }: HeroImagePro
           width: '100%',
           height: '100%',
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           justifyContent: 'center',
-          fontSize: '4rem',
+          paddingBottom: '12%',
+          fontSize: 'clamp(2.5rem, 8vw, 3.5rem)',
         }}
       >
         {glyph}
@@ -56,7 +58,7 @@ export function HeroImage({ src, alt, category, priority = false }: HeroImagePro
       src={src}
       alt={alt}
       fill
-      sizes="100vw"
+      sizes="(max-width: 34rem) 100vw, 544px"
       unoptimized
       referrerPolicy="no-referrer"
       style={{ objectFit: 'cover' }}

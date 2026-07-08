@@ -1,18 +1,19 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Inter } from 'next/font/google'
+import { Young_Serif, Figtree } from 'next/font/google'
 import './globals.css'
 import { BRAND } from '@/lib/brand'
 import { MotionProvider } from '@/components/MotionProvider'
 
-const inter = Inter({
+const figtree = Figtree({
   subsets: ['latin'],
-  variable: '--font-inter',
+  variable: '--font-figtree',
   display: 'swap',
 })
 
-const fraunces = Fraunces({
+const youngSerif = Young_Serif({
   subsets: ['latin'],
-  variable: '--font-fraunces',
+  weight: '400',
+  variable: '--font-young-serif',
   display: 'swap',
 })
 
@@ -34,10 +35,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FFFDF7' },
-    { media: '(prefers-color-scheme: dark)',  color: '#1A1714' },
-  ],
+  themeColor: '#0B1022',
   width: 'device-width',
   initialScale: 1,
 }
@@ -48,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
+    <html lang="en" className={`${figtree.variable} ${youngSerif.variable}`}>
       <body>
         <MotionProvider>{children}</MotionProvider>
       </body>
